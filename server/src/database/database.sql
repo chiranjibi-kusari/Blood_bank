@@ -11,6 +11,10 @@ CREATE TABLE users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+INSERT INTO users (name, email, phone, password, role) 
+VALUES ('System Admin', 'admin1@gmail.com', '9840800467', '$2b$10$7QkYQh2zv9hFjYwZk8hD6uQk9zFfZlYwZk8hD6uQk9zFfZlYwZk8hD6', 'admin');
+
+
 -- 2. donor table
 CREATE TABLE donors (
   id SERIAL PRIMARY KEY,
