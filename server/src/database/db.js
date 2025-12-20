@@ -16,7 +16,7 @@ const pool = new Pool({
 pool
   .connect()
   .then((client) => {
-    console.log("Connected to Postgres");
+    console.log("Connected to PostgreSQL database");
     client.release();
   })
   .catch((err) => console.log("failed connect to postres", err));
