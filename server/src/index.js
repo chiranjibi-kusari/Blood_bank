@@ -1,24 +1,24 @@
 import express from "express";
 
-import adminRoute from "./routes/adminRoutes.js";
 import authRoute from "./routes/authRoutes.js";
+import donationsRoute from "./routes/donationsRoutes.js";
+import inventoryRoute from "./routes/inventoryRoutes.js";
+import requestRoute from "./routes/requestRoutes.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const app = express();
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const PORT = process.env.PORT || 3000;
 
-app.use("/api/admin", adminRoute);
 app.use("/api/user", authRoute);
-
-//app.use("/api/user",userRoute);
-//app.use("/api/donor",donorRoute);
-//app.use("/api/inventory",inventoryRoute);
-//app.use("/api/matching",matchingRoute);
-//app.use("/api/recipient",recipientRoute);
-//app.use("/api/request",requestRoute);
+app.use("/api/donations", donationsRoute);
+app.use("/api/inventory", inventoryRoute);
+app.use("/api/request", requestRoute);
 
 app.listen(process.env.PORT, () => {
   console.log(`Server running on ports ${PORT}`);
