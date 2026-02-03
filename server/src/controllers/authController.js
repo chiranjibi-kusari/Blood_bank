@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 //register user
 
 export const registerUser = async (req, res) => {
-  const { name, email, phone, role, password } = req.body;
+  const { name, email, phone, role = "user", password } = req.body;
 
   try {
     // Check if email already exists
@@ -26,7 +26,7 @@ export const registerUser = async (req, res) => {
     // Insert into users table
     const result = await pool.query(
       "INSERT INTO users (name, email, phone, role, password) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, phone, role",
-      [name, email, phone, role, hashedPassword]
+      [name, email, phone, role, hashedPassword],
     );
 
     const user = result.rows[0];
@@ -77,7 +77,7 @@ export const loginUser = async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || "your_secret_key",
-      { expiresIn: "1h" }
+      { expiresIn: "1h" },
     );
 
     // ✅ Different success messages
@@ -105,13 +105,71 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// Get all users
+// Get all users with pagination
 export const getAllUsers = async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM users");
-    res.json(result.rows);
+    // Get page and limit (size) from query parameters, with defaults
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || parseInt(req.query.size) || 10;
+
+    // Validate parameters
+    if (page < 1) {
+      return res.status(400).json({
+        success: false,
+        msg: "Page must be greater than 0",
+      });
+    }
+
+    if (limit < 1 || limit > 100) {
+      return res.status(400).json({
+        success: false,
+        msg: "Limit must be between 1 and 100",
+      });
+    }
+
+    // Calculate offset
+    const offset = (page - 1) * limit;
+
+    // Get total count of users
+    const countResult = await pool.query(
+      "SELECT COUNT(*) FROM users WHERE role='user'",
+    );
+    const total = parseInt(countResult.rows[0].count);
+
+    // Get paginated users WITHOUT password and sensitive data
+    const result = await pool.query(
+      `SELECT 
+        id,
+        name, 
+        email, 
+        phone, 
+        role
+       FROM users WHERE role='user'
+       LIMIT $1 OFFSET $2`,
+      [limit, offset],
+    );
+
+    // Calculate total pages
+    const totalPages = Math.ceil(total / limit);
+
+    // Return paginated response with all pagination info
+    res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        currentPage: page,
+        pageSize: limit,
+        totalItems: total,
+        totalPages: totalPages,
+      },
+    });
   } catch (err) {
-    res.status(500).json({ msg: "Error fetching users", error: err.message });
+    console.error("Error fetching users:", err);
+    res.status(500).json({
+      success: false,
+      msg: "Error fetching users",
+      error: err.message,
+    });
   }
 };
 
@@ -135,7 +193,7 @@ export const updateUser = async (req, res) => {
   try {
     const result = await pool.query(
       "UPDATE users SET name=$1, email=$2, phone=$3, role=$4 WHERE id=$5 RETURNING id, name, email, phone, role",
-      [name, email, phone, role, req.params.id]
+      [name, email, phone, role, req.params.id],
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ msg: "User not found" });
@@ -151,7 +209,7 @@ export const deleteUser = async (req, res) => {
   try {
     const result = await pool.query(
       "DELETE FROM users WHERE id=$1 RETURNING id",
-      [req.params.id]
+      [req.params.id],
     );
     if (result.rows.length === 0)
       return res.status(404).json({ msg: "User not found" });

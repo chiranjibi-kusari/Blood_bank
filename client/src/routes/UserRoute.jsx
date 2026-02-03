@@ -2,23 +2,28 @@ import React from "react";
 import { Route } from "react-router-dom";
 import { RoleBasePrivateRoute } from "./Guard";
 import Layout from "../pages/Layout";
-import UserDashboard from "../pages/user/UserDashboard";
+import AdminDashboard from "../pages/admin/AdminDashboard";
 import Myrequest from "../pages/user/request/Myrequest";
 import MyResponse from "../pages/user/response/MyResponse";
 
-const UserRoute = () => {
-  <Route
-    path="/user"
-    element={
-      <RoleBasePrivateRoute allowedRole={["ROLE_USER"]}>
-        <Layout />
-      </RoleBasePrivateRoute>
-    }
-  >
-    <Route path="dashboard" element={<UserDashboard />} index={true} />
-    <Route path="request" element={<Myrequest />} />
-    <Route path="response" element={<MyResponse />} />
-  </Route>;
+const AdminRoute = () => {
+  return (
+    // ADDED RETURN STATEMENT HERE
+    <Route
+      path="/user"
+      element={
+        <RoleBasePrivateRoute allowedRole={["user", "user"]}>
+          {" "}
+          {/* Include both */}
+          <Layout />
+        </RoleBasePrivateRoute>
+      }
+    >
+      <Route path="dashboard" element={<AdminDashboard />} index={true} />
+      <Route path="my-donation" element={<MyResponse />} />
+      <Route path="my-request" element={<Myrequest />} />
+    </Route>
+  );
 };
 
-export default UserRoute;
+export default AdminRoute;

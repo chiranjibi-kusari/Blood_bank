@@ -1,13 +1,21 @@
-import pandas as pd
 from sklearn.linear_model import LogisticRegression
 import joblib
 
-data = pd.read_csv("matches.csv")
-X = data[["distance_km", "units_ratio", "urgency", "recency_days"]]
-y = data["success"]
+# Features:
+# [distance_km, days_since_donation, urgency_level]
+X = [
+    [2, 120, 3],
+    [15, 20, 1],
+    [5, 90, 2],
+    [1, 200, 3],
+    [30, 10, 1],
+]
+
+# Label: 1 = successful match, 0 = failed
+y = [1, 0, 1, 1, 0]
 
 model = LogisticRegression()
 model.fit(X, y)
 
-joblib.dump(model, "logistic_model.pkl")
-print("Model trained and saved!")
+joblib.dump(model, "donor_match_model.pkl")
+print("✅ ML model trained & saved")

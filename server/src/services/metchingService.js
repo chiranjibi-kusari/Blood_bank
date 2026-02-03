@@ -1,79 +1,80 @@
 import pool from "../database/db.js";
-import { compatibleDonorGroups } from "../utils/compatibility.js";
-import { haversineKm } from "../utils/haversine.js";
-import { spawn } from "child_process";
-import path from "path";
+import axios from "axios";
 
-export async function predictMatch(features) {
-  return new Promise((resolve, reject) => {
-    const scriptPath = path.resolve("server/ml/predict.py");
-    const py = spawn("python", [scriptPath]);
-    py.stdin.write(JSON.stringify(features));
-    py.stdin.end();
-
-    let data = "";
-    py.stdout.on("data", (chunk) => (data += chunk.toString()));
-    py.stderr.on("data", (err) => reject(err.toString()));
-    py.on("close", () => resolve(parseFloat(data)));
-  });
-}
-
-function urgencyLevel(urgency) {
-  switch (urgency?.toLowerCase()) {
-    case "high":
-      return 3;
-    case "medium":
-      return 2;
-    case "low":
-      return 1;
-    default:
-      return 2;
-  }
-}
-
-const matchDonorsForRequest = async (requestId, topN = 10) => {
-  const reqRes = await pool.query("SELECT * FROM requests WHERE id=$1", [
-    requestId,
-  ]);
-  if (reqRes.rows.length === 0) throw new Error("Request not found");
-  const req = reqRes.rows[0];
-
-  const groups = compatibleDonorGroups(req.blood_group);
-  if (groups.length === 0) return [];
-
-  const donorsRes = await pool.query(
-    `SELECT id, user_id, blood_group, units, donation_date, latitude, longitude
-     FROM donations
-     WHERE blood_group = ANY($1::text[]) AND units > 0`,
-    [groups],
-  );
-
-  const donors = donorsRes.rows;
-
-  const scoredDonors = await Promise.all(
-    donors.map(async (d) => {
-      const distance =
-        req.latitude && req.longitude && d.latitude && d.longitude
-          ? haversineKm(req.latitude, req.longitude, d.latitude, d.longitude)
-          : 0;
-
-      const recencyDays = d.donation_date
-        ? (Date.now() - new Date(d.donation_date).getTime()) /
-          (1000 * 60 * 60 * 24)
-        : 30;
-
-      const score = await predictMatch({
-        distance,
-        units_ratio: Math.min(d.units / req.units, 1),
-        urgency: urgencyLevel(req.urgency),
-        recency_days: recencyDays,
-      });
-
-      return { ...d, distance, score };
-    }),
-  );
-
-  return scoredDonors.sort((a, b) => b.score - a.score).slice(0, topN);
+const bloodCompatibility = {
+  "A+": ["A+", "A-", "O+", "O-"],
+  "A-": ["A-", "O-"],
+  "B+": ["B+", "B-", "O+", "O-"],
+  "B-": ["B-", "O-"],
+  "AB+": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+  "AB-": ["A-", "B-", "AB-", "O-"],
+  "O+": ["O+", "O-"],
+  "O-": ["O-"],
 };
 
-export default matchDonorsForRequest;
+const urgencyMap = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  critical: 3,
+};
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export async function matchDonorsForRequest(requestId) {
+  const reqRes = await pool.query("SELECT * FROM requests WHERE id = $1", [
+    requestId,
+  ]);
+
+  if (!reqRes.rows.length) throw new Error("Request not found");
+
+  const request = reqRes.rows[0];
+  const compatible = bloodCompatibility[request.blood_group];
+
+  const donorsRes = await pool.query(
+    `SELECT *, CURRENT_DATE - donation_date AS days_since_donation
+     FROM donations
+     WHERE blood_group = ANY($1)`,
+    [compatible],
+  );
+
+  const results = [];
+
+  for (const donor of donorsRes.rows) {
+    const distance = haversine(
+      request.latitude,
+      request.longitude,
+      donor.latitude,
+      donor.longitude,
+    );
+
+    const mlResponse = await axios.post("http://localhost:8000/predict", {
+      distance: distance,
+      days_since_donation: donor.days_since_donation,
+      urgency: urgencyMap[request.urgency],
+    });
+
+    results.push({
+      donor_id: donor.id,
+      name: donor.name,
+      blood_group: donor.blood_group,
+      phone: donor.phone,
+      distance_km: distance.toFixed(2),
+      priority_score: mlResponse.data.priority_score,
+    });
+  }
+
+  return results.sort((a, b) => b.priority_score - a.priority_score);
+}

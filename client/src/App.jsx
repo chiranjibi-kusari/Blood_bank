@@ -3,14 +3,16 @@ import Navbar from "./components/Navbar.jsx";
 import Path from "./routes/Path.jsx";
 import { BrowserRouter } from "react-router-dom";
 import Footer from "./pages/pages/Footer.jsx";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const App = () => {
+  const queryClient = new QueryClient();
   return (
-    <BrowserRouter>
-      <Navbar />
-      <Path />
-      <Footer />
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Path />
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 };
 

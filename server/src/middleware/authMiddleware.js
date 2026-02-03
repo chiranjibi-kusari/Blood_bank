@@ -9,8 +9,9 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== "admin") {
-      return res.status(403).json({ msg: "Access denied" });
+
+    if (decoded.role !== "admin" && decoded.role !== "user") {
+      return res.status(403).json({ msg: "Access denied - Invalid role" });
     }
     req.user = decoded;
     next();

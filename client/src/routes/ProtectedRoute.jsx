@@ -6,7 +6,7 @@ const ProtectedRoute = ({ children, allowedRole }) => {
   const token = cookies.token;
   const role = cookies.role;
 
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token) return <Navigate to="/home" replace />;
   if (allowedRole && !allowedRole.include(role)) {
     return <Navigate to="/unauthorized" replace />;
   }
