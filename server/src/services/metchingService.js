@@ -1,26 +1,10 @@
 import pool from "../database/db.js";
-import axios from "axios";
 
-const bloodCompatibility = {
-  "A+": ["A+", "A-", "O+", "O-"],
-  "A-": ["A-", "O-"],
-  "B+": ["B+", "B-", "O+", "O-"],
-  "B-": ["B-", "O-"],
-  "AB+": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
-  "AB-": ["A-", "B-", "AB-", "O-"],
-  "O+": ["O+", "O-"],
-  "O-": ["O-"],
-};
+/* Distance calculation (Haversine formula) */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
 
-const urgencyMap = {
-  low: 1,
-  medium: 2,
-  high: 3,
-  critical: 3,
-};
-
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371;
+  const R = 6371; // km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
 
@@ -30,51 +14,92 @@ function haversine(lat1, lon1, lat2, lon2) {
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) ** 2;
 
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-export async function matchDonorsForRequest(requestId) {
-  const reqRes = await pool.query("SELECT * FROM requests WHERE id = $1", [
-    requestId,
-  ]);
-
-  if (!reqRes.rows.length) throw new Error("Request not found");
-
-  const request = reqRes.rows[0];
-  const compatible = bloodCompatibility[request.blood_group];
-
-  const donorsRes = await pool.query(
-    `SELECT *, CURRENT_DATE - donation_date AS days_since_donation
-     FROM donations
-     WHERE blood_group = ANY($1)`,
-    [compatible],
+export const findMatchingDonors = async (requestId) => {
+  // 1. Get request details
+  const requestResult = await pool.query(
+    `SELECT * FROM requests WHERE id = $1`,
+    [requestId],
   );
 
-  const results = [];
+  if (requestResult.rows.length === 0) {
+    throw new Error("Request not found");
+  }
 
-  for (const donor of donorsRes.rows) {
-    const distance = haversine(
+  const request = requestResult.rows[0];
+
+  // 2. Find eligible donors
+  const donorsResult = await pool.query(
+    `
+    SELECT
+      d.id AS donation_id,
+      d.user_id AS donor_user_id,
+      d.name,
+      d.phone,
+      d.blood_group,
+      d.units,
+      d.latitude,
+      d.longitude,
+      uds.last_donation_date
+    FROM donations d
+    LEFT JOIN user_donation_stats uds ON uds.user_id = d.user_id
+    WHERE
+      d.status = 'available'
+      AND d.expiry_date >= CURRENT_DATE
+      AND check_blood_compatibility($1, d.blood_group) = TRUE
+    `,
+    [request.blood_group],
+  );
+
+  // 3. Calculate distance + log matches
+  const matchedDonors = [];
+
+  for (const donor of donorsResult.rows) {
+    const distance = calculateDistance(
       request.latitude,
       request.longitude,
       donor.latitude,
       donor.longitude,
     );
 
-    const mlResponse = await axios.post("http://localhost:8000/predict", {
-      distance: distance,
-      days_since_donation: donor.days_since_donation,
-      urgency: urgencyMap[request.urgency],
-    });
+    await pool.query(
+      `
+      INSERT INTO matching_logs (
+        request_id,
+        donor_id,
+        donor_user_id,
+        requester_user_id,
+        distance_km,
+        compatibility,
+        outcome
+      )
+      VALUES ($1, $2, $3, $4, $5, TRUE, 'success')
+      `,
+      [
+        request.id,
+        donor.donation_id,
+        donor.donor_user_id,
+        request.user_id,
+        distance,
+      ],
+    );
 
-    results.push({
-      donor_id: donor.id,
+    matchedDonors.push({
+      donation_id: donor.donation_id,
       name: donor.name,
-      blood_group: donor.blood_group,
       phone: donor.phone,
-      distance_km: distance.toFixed(2),
-      priority_score: mlResponse.data.priority_score,
+      blood_group: donor.blood_group,
+      units: donor.units,
+      distance_km: distance,
     });
   }
 
-  return results.sort((a, b) => b.priority_score - a.priority_score);
-}
+  // 4. Sort by nearest distance
+  matchedDonors.sort(
+    (a, b) => (a.distance_km ?? 9999) - (b.distance_km ?? 9999),
+  );
+
+  return matchedDonors;
+};

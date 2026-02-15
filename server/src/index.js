@@ -5,7 +5,7 @@ import donationsRoute from "./routes/donationsRoutes.js";
 import inventoryRoute from "./routes/inventoryRoutes.js";
 import requestRoute from "./routes/requestRoutes.js";
 import dotenv from "dotenv";
-
+import requestRoutes from "./routes/requestRoutes.js";
 import cors from "cors";
 dotenv.config();
 
@@ -29,6 +29,7 @@ app.use("/api/user", authRoute);
 app.use("/api/donations", donationsRoute);
 app.use("/api/inventory", inventoryRoute);
 app.use("/api/request", requestRoute);
+
 
 app.listen(process.env.PORT, () => {
   console.log(`Server running on ports ${PORT}`);

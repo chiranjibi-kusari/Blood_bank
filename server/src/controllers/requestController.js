@@ -1,6 +1,7 @@
 import pool from "../database/db.js";
 import geocodeAddress from "../utils/geocode.js";
 
+import { findMatchingDonors } from "../services/metchingService.js";
 //create
 
 //export const createRequest = async (req, res) => {
@@ -78,171 +79,240 @@ import geocodeAddress from "../utils/geocode.js";
 //    });
 //  }
 //};
+//export const createRequest = async (req, res) => {
+//  try {
+//    const {
+//      address,
+//      blood_group,
+//      units,
+//      urgency = "medium",
+//      hospital_name,
+//      patient_name,
+//      patient_age,
+//      request_date,
+//    } = req.body;
+
+//    const user_id = req.user.id;
+//    const user_role = req.user.role;
+
+//    console.log("Creating request for user:", { user_id, user_role });
+
+//    // Validate required fields
+//    if (!address || !blood_group || !units || !request_date) {
+//      return res.status(400).json({ msg: "All fields are required" });
+//    }
+
+//    // Validate units is a positive integer
+//    const unitsNum = parseInt(units);
+//    if (isNaN(unitsNum) || unitsNum <= 0) {
+//      return res.status(400).json({ msg: "Units must be a positive number" });
+//    }
+
+//    // Validate and format the request date
+//    let formattedRequestDate;
+//    try {
+//      // Parse the date (could be string from frontend)
+//      const inputDate = new Date(request_date);
+
+//      // Check if date is valid
+//      if (isNaN(inputDate.getTime())) {
+//        return res.status(400).json({ msg: "Invalid date format" });
+//      }
+
+//      // Format as YYYY-MM-DD for PostgreSQL DATE type
+//      formattedRequestDate = inputDate.toISOString().split("T")[0];
+
+//      // Get today's date at midnight UTC for comparison
+//      const today = new Date();
+//      today.setHours(0, 0, 0, 0);
+//      const todayUTC = new Date(today.toISOString().split("T")[0]);
+
+//      // Check if request date is not in the past
+//      // Compare dates by creating new Date objects with only date part
+//      const requestDateOnly = new Date(formattedRequestDate);
+
+//      if (requestDateOnly < todayUTC) {
+//        return res.status(400).json({
+//          msg: "Request date cannot be in the past",
+//          details: {
+//            request_date: formattedRequestDate,
+//            today: todayUTC.toISOString().split("T")[0],
+//          },
+//        });
+//      }
+//    } catch (dateError) {
+//      return res.status(400).json({
+//        msg: "Invalid date format. Please use a valid date",
+//        error: dateError.message,
+//      });
+//    }
+
+//    // Validate blood_group
+//    const validBloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+//    if (!validBloodGroups.includes(blood_group)) {
+//      return res.status(400).json({
+//        msg: "Invalid blood group. Must be one of: A+, A-, B+, B-, AB+, AB-, O+, O-",
+//      });
+//    }
+
+//    // Validate urgency
+//    const validUrgencies = ["low", "medium", "high", "critical"];
+//    if (!validUrgencies.includes(urgency)) {
+//      return res.status(400).json({
+//        msg: "Invalid urgency level. Must be one of: low, medium, high, critical",
+//      });
+//    }
+
+//    // Get user details from database
+//    const userResult = await pool.query(
+//      "SELECT name, email, phone FROM users WHERE id = $1",
+//      [user_id],
+//    );
+
+//    if (userResult.rows.length === 0) {
+//      return res.status(404).json({ msg: "User not found" });
+//    }
+
+//    const { name, email, phone } = userResult.rows[0];
+
+//    // Geocode address (with error handling)
+//    let coords = { lat: null, lon: null };
+//    try {
+//      coords = await geocodeAddress(address);
+//    } catch (geoError) {
+//      console.warn("Geocoding failed:", geoError.message);
+//    }
+
+//    // Insert request
+//    const result = await pool.query(
+//      `INSERT INTO requests
+//       (user_id, name, email, phone, address, blood_group, units, urgency,
+//        request_date, latitude, longitude, hospital_name, patient_name, patient_age)
+//       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+//       RETURNING *`,
+//      [
+//        user_id,
+//        name,
+//        email,
+//        phone,
+//        address,
+//        blood_group,
+//        unitsNum,
+//        urgency,
+//        formattedRequestDate,
+//        coords?.lat || null,
+//        coords?.lon || null,
+//        hospital_name || null,
+//        patient_name || null,
+//        patient_age ? parseInt(patient_age) : null,
+//      ],
+//    );
+
+//    res.status(201).json({
+//      success: true,
+//      msg: "Blood request created successfully",
+//      request: result.rows[0],
+//    });
+//  } catch (err) {
+//    console.error("Error in createRequest:", err);
+
+//    // Handle specific PostgreSQL errors
+//    if (err.code === "22007") {
+//      // invalid_datetime_format
+//      return res.status(400).json({
+//        msg: "Invalid date format. Please use YYYY-MM-DD format",
+//      });
+//    }
+
+//    if (err.code === "23514") {
+//      // check_violation for blood_group or urgency
+//      if (err.constraint && err.constraint.includes("blood_group")) {
+//        return res.status(400).json({
+//          msg: "Invalid blood group. Must be one of: A+, A-, B+, B-, AB+, AB-, O+, O-",
+//        });
+//      }
+//      if (err.constraint && err.constraint.includes("urgency")) {
+//        return res.status(400).json({
+//          msg: "Invalid urgency level. Must be one of: low, medium, high, critical",
+//        });
+//      }
+//    }
+
+//    res.status(500).json({
+//      msg: "Error creating blood request",
+//      error:
+//        process.env.NODE_ENV === "development"
+//          ? err.message
+//          : "Internal server error",
+//    });
+//  }
+//};
+
 export const createRequest = async (req, res) => {
   try {
     const {
+      name,
+      email,
+      phone,
       address,
       blood_group,
       units,
-      urgency = "medium",
+      urgency,
+      latitude,
+      longitude,
       hospital_name,
       patient_name,
       patient_age,
-      request_date,
     } = req.body;
 
-    const user_id = req.user.id;
-    const user_role = req.user.role;
+    const userId = req.user.id; // from auth middleware
 
-    console.log("Creating request for user:", { user_id, user_role });
-
-    // Validate required fields
-    if (!address || !blood_group || !units || !request_date) {
-      return res.status(400).json({ msg: "All fields are required" });
-    }
-
-    // Validate units is a positive integer
-    const unitsNum = parseInt(units);
-    if (isNaN(unitsNum) || unitsNum <= 0) {
-      return res.status(400).json({ msg: "Units must be a positive number" });
-    }
-
-    // Validate and format the request date
-    let formattedRequestDate;
-    try {
-      // Parse the date (could be string from frontend)
-      const inputDate = new Date(request_date);
-
-      // Check if date is valid
-      if (isNaN(inputDate.getTime())) {
-        return res.status(400).json({ msg: "Invalid date format" });
-      }
-
-      // Format as YYYY-MM-DD for PostgreSQL DATE type
-      formattedRequestDate = inputDate.toISOString().split("T")[0];
-
-      // Get today's date at midnight UTC for comparison
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayUTC = new Date(today.toISOString().split("T")[0]);
-
-      // Check if request date is not in the past
-      // Compare dates by creating new Date objects with only date part
-      const requestDateOnly = new Date(formattedRequestDate);
-
-      if (requestDateOnly < todayUTC) {
-        return res.status(400).json({
-          msg: "Request date cannot be in the past",
-          details: {
-            request_date: formattedRequestDate,
-            today: todayUTC.toISOString().split("T")[0],
-          },
-        });
-      }
-    } catch (dateError) {
-      return res.status(400).json({
-        msg: "Invalid date format. Please use a valid date",
-        error: dateError.message,
-      });
-    }
-
-    // Validate blood_group
-    const validBloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-    if (!validBloodGroups.includes(blood_group)) {
-      return res.status(400).json({
-        msg: "Invalid blood group. Must be one of: A+, A-, B+, B-, AB+, AB-, O+, O-",
-      });
-    }
-
-    // Validate urgency
-    const validUrgencies = ["low", "medium", "high", "critical"];
-    if (!validUrgencies.includes(urgency)) {
-      return res.status(400).json({
-        msg: "Invalid urgency level. Must be one of: low, medium, high, critical",
-      });
-    }
-
-    // Get user details from database
-    const userResult = await pool.query(
-      "SELECT name, email, phone FROM users WHERE id = $1",
-      [user_id],
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ msg: "User not found" });
-    }
-
-    const { name, email, phone } = userResult.rows[0];
-
-    // Geocode address (with error handling)
-    let coords = { lat: null, lon: null };
-    try {
-      coords = await geocodeAddress(address);
-    } catch (geoError) {
-      console.warn("Geocoding failed:", geoError.message);
-    }
-
-    // Insert request
-    const result = await pool.query(
-      `INSERT INTO requests 
-       (user_id, name, email, phone, address, blood_group, units, urgency, 
-        request_date, latitude, longitude, hospital_name, patient_name, patient_age) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
-       RETURNING *`,
+    // 1. Create request
+    const requestResult = await pool.query(
+      `
+      INSERT INTO requests (
+        user_id, name, email, phone, address,
+        blood_group, units, urgency,
+        request_date, latitude, longitude,
+        hospital_name, patient_name, patient_age
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_DATE,$9,$10,$11,$12,$13)
+      RETURNING *
+      `,
       [
-        user_id,
+        userId,
         name,
         email,
         phone,
         address,
         blood_group,
-        unitsNum,
+        units,
         urgency,
-        formattedRequestDate,
-        coords?.lat || null,
-        coords?.lon || null,
-        hospital_name || null,
-        patient_name || null,
-        patient_age ? parseInt(patient_age) : null,
+        latitude,
+        longitude,
+        hospital_name,
+        patient_name,
+        patient_age,
       ],
     );
 
+    const request = requestResult.rows[0];
+
+    // 2. Find matching donors
+    const matchedDonors = await findMatchingDonors(request.id);
+
+    // 3. Respond
     res.status(201).json({
-      success: true,
-      msg: "Blood request created successfully",
-      request: result.rows[0],
+      message: "Blood request created successfully",
+      request,
+      totalMatches: matchedDonors.length,
+      matchedDonors,
     });
-  } catch (err) {
-    console.error("Error in createRequest:", err);
-
-    // Handle specific PostgreSQL errors
-    if (err.code === "22007") {
-      // invalid_datetime_format
-      return res.status(400).json({
-        msg: "Invalid date format. Please use YYYY-MM-DD format",
-      });
-    }
-
-    if (err.code === "23514") {
-      // check_violation for blood_group or urgency
-      if (err.constraint && err.constraint.includes("blood_group")) {
-        return res.status(400).json({
-          msg: "Invalid blood group. Must be one of: A+, A-, B+, B-, AB+, AB-, O+, O-",
-        });
-      }
-      if (err.constraint && err.constraint.includes("urgency")) {
-        return res.status(400).json({
-          msg: "Invalid urgency level. Must be one of: low, medium, high, critical",
-        });
-      }
-    }
-
+  } catch (error) {
+    console.error(error);
     res.status(500).json({
-      msg: "Error creating blood request",
-      error:
-        process.env.NODE_ENV === "development"
-          ? err.message
-          : "Internal server error",
+      message: "Error creating request",
+      error: error.message,
     });
   }
 };
@@ -547,10 +617,10 @@ export const matchRequest = async (req, res) => {
     const matches = await matchDonorsForRequest(req.params.id, 10);
     res.json({ request_id: req.params.id, matches });
   } catch (err) {
-    console.error("Match donors error:", err); // full traceback in logs
+    console.error("Match donors error:", err);
     res.status(500).json({
       msg: "Error matching donors",
-      error: err.message, // ✅ include actual error
+      error: err.message,
     });
   }
 };

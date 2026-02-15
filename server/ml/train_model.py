@@ -1,21 +1,21 @@
+import pandas as pd
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
 import joblib
 
-# Features:
-# [distance_km, days_since_donation, urgency_level]
-X = [
-    [2, 120, 3],
-    [15, 20, 1],
-    [5, 90, 2],
-    [1, 200, 3],
-    [30, 10, 1],
-]
+# Load data
+df = pd.read_csv("training_data.csv")
 
-# Label: 1 = successful match, 0 = failed
-y = [1, 0, 1, 1, 0]
+X = df[
+    ["distance_km", "days_since_last_donation", "blood_match", "urgency"]
+]
+y = df["matched"]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
 model = LogisticRegression()
-model.fit(X, y)
+model.fit(X_scaled, y)
 
-joblib.dump(model, "donor_match_model.pkl")
-print("✅ ML model trained & saved")
+joblib.dump(model, "model.pkl")
+joblib.dump(scaler, "scaler.pkl")
