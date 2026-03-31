@@ -39,6 +39,7 @@ export const registerUser = async (req, res) => {
 
     res.status(201).json({ msg: successMsg, user });
   } catch (err) {
+    console.error("Login error FULL:", err); // 👈 VERY IMPORTANT
     const errorMsg =
       role === "admin"
         ? "Admin registration error: server issue"
