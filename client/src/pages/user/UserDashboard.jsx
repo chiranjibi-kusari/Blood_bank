@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import Card from "../../components/reusable/Card";
-import { useGetDonation } from "../../components/hooks/useDonation";
-import { FaUsers, FaDonate, FaHandHoldingHeart } from "react-icons/fa";
-import { useGetUserList } from "../../components/hooks/useUser";
-import { useGetRequest } from "../../components/hooks/useRequest";
 import CreateDonation from "./response/CreateDonation";
 import CreateRequest from "./request/CreateRequest";
+import { useGetDonation } from "../../components/hooks/useDonation";
+import { FaUsers, FaDonate, FaHandHoldingHeart } from "react-icons/fa";
+import { useGetRequest } from "../../components/hooks/useRequest";
 import {
   Close as CloseIcon,
   Refresh,
@@ -22,8 +21,27 @@ import {
 import BloodTypeBarChart from "../../components/graph/BloodTypeBarChart";
 import RequestBloodTypePieChart from "../../components/graph/RequestBloodTypePieChart";
 import LineGraph from "../../components/graph/LineGraph";
+import { useGetUserList } from "../../components/hooks/useUser";
+import BloodTypeBarChartSingle from "../../components/graph/BloodTypeBarChartSingle";
 
 const UserDashboard = () => {
+  const {
+    data: donationData,
+    isLoading: donationLoading,
+    error: donationError,
+  } = useGetDonation();
+
+  const {
+    data: requestData,
+    isLoading: requestLoading,
+    error: requestError,
+  } = useGetRequest();
+  const {
+    data: userData,
+    isLoading: userLoading,
+    error: userError,
+  } = useGetUserList();
+
   // Separate states for Request and Donation dialogs
   const [openRequestDialog, setOpenRequestDialog] = useState(false);
   const [openDonationDialog, setOpenDonationDialog] = useState(false);
@@ -56,26 +74,8 @@ const UserDashboard = () => {
     setOpenDonationDialog(false);
   };
 
-  const {
-    data: donationData,
-    isLoading: donationLoading,
-    error: donationError,
-  } = useGetDonation();
-
-  const {
-    data: userData,
-    isLoading: userLoading,
-    error: userError,
-  } = useGetUserList();
-
-  const {
-    data: requestData,
-    isLoading: requestLoading,
-    error: requestError,
-  } = useGetRequest();
-
   // Handle loading states
-  if (donationLoading || userLoading || requestLoading) {
+  if (donationLoading || requestLoading) {
     return (
       <div className="px-10 flex items-center justify-center h-64">
         <div className="text-xl">Loading dashboard data...</div>
@@ -84,7 +84,7 @@ const UserDashboard = () => {
   }
 
   // Handle errors
-  if (donationError || userError || requestError) {
+  if (donationError || requestError) {
     return (
       <div className="px-10">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -95,9 +95,12 @@ const UserDashboard = () => {
   }
 
   // Use optional chaining and provide fallback values
-  const totalDonations = donationData?.pagination?.totalItems || 0;
+  //const totalDonations = donationData?.pagination?.totalItems || 0;
+
+  //const totalRequests = requestData?.pagination?.totalItems || 0;
+  const totalRequests = requestData?.count;
+  const totalDonations = donationData?.count;
   const totalUsers = userData?.pagination?.totalItems || 0;
-  const totalRequests = requestData?.pagination?.totalItems || 0;
 
   return (
     <div className="px-10">
@@ -212,9 +215,6 @@ const UserDashboard = () => {
           <h1 className="text-3xl font-bold pb-1 text-gray-800">
             User Dashboard
           </h1>
-          <p className="pb-6 text-gray-600">
-            Manage your blood donations and requests
-          </p>
         </div>
         <div className="flex gap-4">
           <button
@@ -235,16 +235,23 @@ const UserDashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card
-          name="Total my Donations"
+          name="Total Users"
+          icon={<FaUsers className="text-2xl text-green-600" />}
+          total={totalUsers}
+          bg="bg-gradient-to-r from-green-500 to-green-600"
+          textColor="text-white"
+        />
+        <Card
+          name="Total Donations"
           icon={<FaDonate className="text-2xl text-red-600" />}
           total={totalDonations}
           bg="bg-gradient-to-r from-red-500 to-red-600"
           textColor="text-white"
         />
         <Card
-          name="Total my Requests"
+          name="Total Requests"
           icon={<FaHandHoldingHeart className="text-2xl text-blue-600" />}
           total={totalRequests}
           bg="bg-gradient-to-r from-blue-500 to-blue-600"
@@ -252,18 +259,13 @@ const UserDashboard = () => {
         />
       </div>
 
-      <LineGraph />
-
       {/* Request Blood Types */}
       <div className="mb-8 mt-10">
-        <div className="flex justify-between flex-col items-center mb-4">
-          <h1 className="text-xl font-semibold text-gray-800">
-            My Request Blood Types
-          </h1>
-          <span className="text-sm text-gray-500">
-            Summary of your blood requests by type
-          </span>
-        </div>
+        <BloodTypeBarChartSingle
+          donationData={donationData}
+          title="Blood Type Availability"
+        />
+
         <RequestBloodTypePieChart
           requestData={requestData}
           title="Blood Type Request"

@@ -48,9 +48,11 @@ const AdminDashboard = () => {
   }
 
   // Use optional chaining and provide fallback values
-  const totalDonations = donationData?.pagination?.totalItems || 0;
+  //const totalDonations = donationData?.pagination?.totalItems || 0;
   const totalUsers = userData?.pagination?.totalItems || 0;
-  const totalRequests = requestData?.pagination?.totalItems || 0;
+  //const totalRequests = requestData?.pagination?.totalItems || 0;
+  const totalRequests = requestData?.count;
+  const totalDonations = donationData?.count;
 
   return (
     <div className="px-10">
@@ -84,7 +86,7 @@ const AdminDashboard = () => {
             donationData={donationData}
             requestData={requestData}
             title="Blood Type Availability vs Requests"
-            name1={"Available"}
+            name1={"donars"}
             name2={"Requested"}
           />
           {/*<BloodTypeBarChartSingle

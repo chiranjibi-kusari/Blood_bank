@@ -24,13 +24,13 @@ import { toast } from "react-toastify";
 const menus = {
   user: [
     { name: "Dashboard", icon: <FaHome />, path: "/user/dashboard" },
-    { name: "My Donation", icon: <FaTable />, path: "/user/my-donation" },
-    // { name: "Add Lead", icon: <FaPlus />, path: "/branch-staff/add-lead" },
-    {
-      name: "My Request",
-      icon: <FaProjectDiagram />,
-      path: "/user/my-request",
-    },
+    //{ name: "My Donation", icon: <FaTable />, path: "/user/my-donation" },
+    //// { name: "Add Lead", icon: <FaPlus />, path: "/branch-staff/add-lead" },
+    //{
+    //  name: "My Request",
+    //  icon: <FaProjectDiagram />,
+    //  path: "/user/my-request",
+    //},
     //{ name: "Matching", icon: <FaTasks />, path: "/user/matching" },
   ],
 

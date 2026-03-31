@@ -113,8 +113,8 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
         password: formData.password,
       });
 
-      if (response.data) {
-        const { user, token } = response.data;
+      if (response?.data) {
+        const { user, token } = response?.data;
 
         setCookie("token", token);
         setCookie("role", user.role);
@@ -127,6 +127,10 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
           user: "/user/dashboard",
         };
 
+        toast.success("Login successful! ..", {
+          position: "top-right",
+          autoClose: 1000,
+        });
         if (user.role && roleRoutes[user.role]) {
           navigate(roleRoutes[user.role]);
         } else {
@@ -164,9 +168,9 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
 
       console.log("Registration response:", response.data);
 
-      if (response.data) {
-        if (response.data.token && response.data.user) {
-          const { user, token } = response.data;
+      if (response?.data) {
+        if (response?.data?.token && response?.data?.user) {
+          const { user, token } = response?.data;
 
           setCookie("token", token, { path: "/" });
           setCookie("role", user.role, { path: "/" });
@@ -191,7 +195,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
 
           toast.success("Registration successful! Welcome to your dashboard.", {
             position: "top-right",
-            autoClose: 3000,
+            autoClose: 1000,
           });
         } else {
           setSuccess(
@@ -343,7 +347,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg
-                      className="h-4 w-4 text-gray-400"
+                      className="h-6 w-5 text-gray-400"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -361,7 +365,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
                     value={formData.name}
                     onChange={handleChange}
                     required={formType === "register"}
-                    className="block w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                     placeholder="Enter your name...."
                     autoComplete="name"
                   />
@@ -380,7 +384,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg
-                    className="h-4 w-4 text-gray-400"
+                    className="h-6 w-5 text-gray-400"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -395,7 +399,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                   placeholder="Enter your email..."
                   autoComplete="email"
                 />
@@ -414,7 +418,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg
-                      className="h-4 w-4 text-gray-400"
+                      className="h-6 w-5 text-gray-400"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -435,7 +439,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
                       setFormData((prev) => ({ ...prev, phone: formatted }));
                     }}
                     required={formType === "register"}
-                    className="block w-full pl-10 pr-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                     placeholder="Enter your phone no."
                     autoComplete="tel"
                     maxLength="15"
@@ -455,7 +459,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg
-                    className="h-4 w-4 text-gray-400"
+                    className="h-6 w-5 text-gray-400"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -473,7 +477,7 @@ const Login = ({ onAuthSuccess, defaultMode = "login" }) => {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="block w-full pl-10 pr-12 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                  className="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                   placeholder="Enter your password"
                   autoComplete={
                     formType === "login" ? "current-password" : "new-password"

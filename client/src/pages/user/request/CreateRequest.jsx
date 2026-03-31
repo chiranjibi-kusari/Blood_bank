@@ -986,7 +986,7 @@ const CreateRequest = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-1">
-              City
+              Address
             </label>
             <input
               type="text"
@@ -1000,7 +1000,7 @@ const CreateRequest = () => {
           {/* Date */}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-1">
-              Request Date
+              Date of Blood require
             </label>
             <input
               type="date"

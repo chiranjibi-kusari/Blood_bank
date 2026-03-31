@@ -6,12 +6,13 @@ export const useGetDonation = (params = {}) => {
   return useQuery({
     queryKey: ["donations", params],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(endpoints?.GET_DONATION, {
-        params: {
-          page: params.page || 1,
-          limit: params.size || 10,
-        },
-      });
+      //const { data } = await axiosInstance.get(endpoints?.GET_DONATION, {
+      //  params: {
+      //    page: params.page || 1,
+      //    limit: params.size || 10,
+      //  },
+      //});
+      const { data } = await axiosInstance.get("http://localhost:8000/donors");
       return data;
     },
     keepPreviousData: true,
