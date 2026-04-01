@@ -22,7 +22,6 @@
 //  .catch((err) => console.log("failed connect to postres", err));
 //export default pool;
 
-
 import pkg from "pg";
 import dotenv from "dotenv";
 
