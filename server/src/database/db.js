@@ -33,9 +33,9 @@ const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT || 5432,
+  port: process.env.DB_PORT || 6543,  // ← change 5432 to 6543
   database: process.env.DB_NAME,
-  ssl: { rejectUnauthorized: false }, // required for Supabase
+  ssl: { rejectUnauthorized: false },
 });
 
 pool
